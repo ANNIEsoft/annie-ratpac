@@ -1,5 +1,6 @@
 // standard library includes
 #include <iostream>
+#include <memory>
 #include <vector>
 
 // ROOT includes
@@ -15,16 +16,103 @@
 #include "RAT/DS/PMT.hh"
 #include "RAT/DSReader.hh"
 
-int rat2reco(char *filename) {
+class PMTInfo {
+  public:
+    PMTInfo(int x, int y, int z, int card, int channel)
+      : x_(x), y_(y), z_(z), card_(card), channel_(channel) {}
+    int x() const { return x_; }
+    int y() const { return y_; }
+    int z() const { return z_; }
+    int card() const { return card_; }
+    int channel() const { return channel_; }
+
+  protected:
+    int x_;
+    int y_;
+    int z_;
+    int card_;
+    int channel_;
+};
+
+const std::map<int, PMTInfo> pmt_id_to_info = {
+  // { ID, { x, y, z, card, channel } }
+  { 1, { 0, 0, 3, 3, 0 } },
+  { 2, { 0, 0, 2, 3, 1 } },
+  { 3, { 0, 0, 1, 3, 2 } },
+  { 4, { 1, 0, 0, 3, 3 } },
+  { 5, { 2, 0, 0, 4, 0 } },
+  { 6, { 3, 0, 0, 4, 1 } },
+  { 7, { 4, 0, 0, 4, 2 } },
+  { 8, { 5, 0, 0, 4, 3 } },
+  { 9, { 6, 0, 0, 5, 0 } },
+  { 10, { 7, 0, 1, 5, 1 } },
+  { 11, { 7, 0, 2, 5, 2 } },
+  { 12, { 7, 0, 3, 5, 3 } },
+  { 13, { 1, 0, 1, 6, 0 } },
+  { 14, { 2, 0, 1, 6, 1 } },
+  { 15, { 2, 0, 2, 6, 2 } },
+  { 16, { 1, 0, 2, 6, 3 } },
+  { 17, { 3, 0, 1, 8, 0 } },
+  { 18, { 4, 0, 1, 8, 1 } },
+  { 19, { 4, 0, 2, 8, 2 } },
+  { 20, { 3, 0, 2, 8, 3 } },
+  { 21, { 5, 0, 1, 9, 0 } },
+  { 22, { 6, 0, 1, 9, 1 } },
+  { 23, { 6, 0, 2, 9, 2 } },
+  { 24, { 5, 0, 2, 9, 3 } },
+  { 25, { 1, 0, 3, 10, 0 } },
+  { 26, { 2, 0, 3, 10, 1 } },
+  { 27, { 2, 0, 4, 10, 2 } },
+  { 28, { 1, 0, 4, 10, 3 } },
+  { 29, { 3, 0, 3, 11, 0 } },
+  { 30, { 4, 0, 3, 11, 1 } },
+  { 31, { 4, 0, 4, 11, 2 } },
+  { 32, { 3, 0, 4, 11, 3 } },
+  { 33, { 5, 0, 3, 13, 0 } },
+  { 34, { 6, 0, 3, 13, 1 } },
+  { 35, { 6, 0, 4, 13, 2 } },
+  { 36, { 5, 0, 4, 13, 3 } },
+  { 37, { 1, 0, 5, 14, 0 } },
+  { 38, { 2, 0, 5, 14, 1 } },
+  { 39, { 2, 0, 6, 14, 2 } },
+  { 40, { 1, 0, 6, 14, 3 } },
+  { 41, { 3, 0, 5, 15, 0 } },
+  { 42, { 4, 0, 5, 15, 1 } },
+  { 43, { 4, 0, 6, 15, 2 } },
+  { 44, { 3, 0, 6, 15, 3 } },
+  { 45, { 5, 0, 5, 16, 0 } },
+  { 46, { 6, 0, 5, 16, 1 } },
+  { 47, { 6, 0, 6, 16, 2 } },
+  { 48, { 5, 0, 6, 16, 3 } },
+  { 49, { 0, 0, 4, 18, 0 } },
+  { 50, { 0, 0, 5, 18, 1 } },
+  { 51, { 0, 0, 6, 18, 2 } },
+  { 52, { 1, 0, 7, 18, 3 } },
+  { 53, { 2, 0, 7, 19, 0 } },
+  { 54, { 3, 0, 7, 19, 1 } },
+  { 55, { 4, 0, 7, 19, 2 } },
+  { 56, { 5, 0, 7, 19, 3 } },
+  { 57, { 6, 0, 7, 20, 0 } },
+  { 58, { 7, 0, 6, 20, 1 } },
+  { 59, { 7, 0, 5, 20, 2 } },
+  { 60, { 7, 0, 4, 20, 3 } },
+};
+
+constexpr int NCV_PMT_1_ID = 6;
+constexpr int NCV_PMT_2_ID = 49;
+
+int rat2reco(const std::string& file_name) {
 
   // create a random number generator
   gRandom = new TRandom3();
 
   // Load the files
-  TFile inputfile(filename,"READ");
-  RAT::DSReader *dsReader;
-  RAT::DS::Root   *ds;
-  dsReader = new RAT::DSReader(inputfile.GetName());
+  TFile input_file(file_name.c_str(), "read");
+
+  std::unique_ptr<RAT::DSReader> dsReader
+    = std::make_unique<RAT::DSReader>(input_file.GetName());
+
+  RAT::DS::Root* ds;
   ULong64_t NbEntries = dsReader->GetTotal();
 
   // some values about your waveform
@@ -33,16 +121,16 @@ int rat2reco(char *filename) {
   Float_t pulse_shape[6] = {5*0.001/35.,10*0.001/35.,8*0.001/35.,6*0.001/35.,4*0.001/35.,2*0.001/35.};
   Int_t pulse_location[3] = {10000,10010,10013}; // where you want your pulses to be located
   const Int_t nb_samples = 40000; // nb points in your waveform
-
-  Float_t waveform[nb_samples], waveform_samples[nb_samples];
+  Int_t trigger_offset = 100; // amount of samples you want to keep free at the beginning of your window
 
   // Create output file
-  TFile outputfile(Form("rat2reco_%s", inputfile.GetName() ),"RECREATE");
+  TFile output_file(Form("rat2reco_%s", input_file.GetName() ),"RECREATE");
 
   // Tree and branhces
-  TTree *PMTData = new TTree("PMTData","PMT Data tree");
+  TTree* PMTData = new TTree("PMTData","PMT Data tree");
   long LastSync ,StartCount, TriggerCount;
-  Int_t SequenceID, StartTimeSec, StartTimeNSec, TriggerNumber, CardID, Channel, BufferSize, Trigger, PMTID, PMTx, PMTy, PMTz, PMTf;
+  Int_t SequenceID, StartTimeSec, StartTimeNSec, TriggerNumber, CardID;
+  Int_t Channel, BufferSize, Trigger, PMTID, PMTx, PMTy, PMTz, PMTf;
   int Rate;
   Float_t Data[nb_samples];
   PMTData->Branch("LastSync",&LastSync,"LastSync/l");// no idea, set to 0
@@ -64,154 +152,140 @@ int rat2reco(char *filename) {
   PMTData->Branch("PMTy",&PMTy,"PMTy/I");
   PMTData->Branch("PMTz",&PMTz,"PMTz/I");
 
+  // Branch variables that are the same for every entry
+  BufferSize = nb_samples;
+  LastSync = 0;
+  StartCount = 0;
+  StartTimeSec = 0;
+  StartTimeNSec = 0;
+  TriggerNumber = 0;
+  TriggerCount = 0;
+  Rate = 0;
+  PMTf = 0;
 
   // Variables
-  Bool_t broken_tube = false;
-  std::vector<Int_t> hitPMT;
-  Bool_t ncv_hit;
-
-  for(Int_t i = 0; i < nb_samples; ++i) {
-    waveform_samples[i] = i;
-  }
-
-  // PMT grid coordinates (not in ratpac x,y,z)
-  int pmt_x_array_run1[] = {0,0,0,1,2,3,4,5,6,7,7,7,1,2,2,1,3,4,4,3,5,6,6,5,1,2,2,1,3,4,4,3,5,6,6,5,1,2,2,1,3,4,4,3,5,6,6,5,0,0,0,1,2,3,4,5,6,7,7,7};
-  int pmt_z_array_run1[] = {3,2,1,0,0,0,0,0,0,1,2,3,1,1,2,2,1,1,2,2,1,1,2,2,3,3,4,4,3,3,4,4,3,3,4,4,5,5,6,6,5,5,6,6,5,5,6,6,4,5,6,7,7,7,7,7,7,6,5,4};
-  int pmt_card_array_run1[] = {3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,8,8,8,8,9,9,9,9,10,10,10,10,11,11,11,11,13,13,13,13,14,14,14,14,15,15,15,15,16,16,16,16,18,18,18,18,19,19,19,19,20,20,20,20};
-  int pmt_channel_array_run1[] = {0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3};
+  std::set<int> hit_PMT_indices;
+  bool ncv_hit;
 
   ULong64_t num_entries = dsReader->GetTotal();
   for(ULong64_t entry = 0; entry < num_entries; ++entry) {
-    ds = dsReader->GetEvent(entry);
+    RAT::DS::Root* ds = dsReader->GetEvent(entry);
+    auto* mc = ds->GetMC();
+
+    // Use the entry number as the trigger and sequence ID for rat2reco fake
+    // data
+    Trigger = entry;
+    SequenceID = entry;
+
     if (entry % 10 == 0) std::cout << "Event " << entry << '\n';
 
-    // Some initilizations
-    broken_tube = false; hitPMT.clear(); ncv_hit = false;
+    // Some initializations
+    hit_PMT_indices.clear();
+    ncv_hit = false;
 
-//     cout << "New evt -- " << endl;
-
-    for( Int_t jPMT = 0; jPMT < ds->GetMC()->GetMCPMTCount(); ++jPMT ){
-     	if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 61 || ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 62){
-	 ncv_hit = true;
-	 break;
-	}
+    // cout << "New evt -- " << endl;
+    int num_mc_pmts = mc->GetMCPMTCount();
+    for ( int jPMT = 0; jPMT < num_mc_pmts; ++jPMT ) {
+      int mc_pmt_id = mc->GetMCPMT(jPMT)->GetID();
+      hit_PMT_indices.insert(jPMT);
+      if (!ncv_hit && (mc_pmt_id == 60 || mc_pmt_id == 61)) ncv_hit = true;
     }
 
-    if(ncv_hit) {
-    for( Int_t jPMT = 0; jPMT < ds->GetMC()->GetMCPMTCount(); ++jPMT ){
+    if (ncv_hit) {
+      for ( int iPMT = 0; iPMT < 64; ++iPMT ) {
 
-      if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 6 ||
-	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 49 ||
-	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 19 ||
-	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 37) {
-	continue;
-	}
+        RAT::DS::MCPMT* mc_pmt = nullptr;
+        if (hit_PMT_indices.count(iPMT)) {
+          mc_pmt = mc->GetMCPMT(iPMT);
+          int mc_pmt_id = mc_pmt->GetID();
 
-// 	 	cout << "Hit: " << ds->GetMC()->GetMCPMT(jPMT)->GetID() << endl;
+          // Skip the two channels that have been replaced
+          // by the NCV PMTs (RAT-PAC IDs 5 and 48). Also
+          // skip the two channels (RAT-PAC IDs 18 and 36)
+          // that have been replaced by the neutron source
+          // trigger PMT and the cosmic trigger input,
+          // respectively.
+          if (mc_pmt_id == 5 || mc_pmt_id == 48 ||
+            mc_pmt_id == 18 || mc_pmt_id == 36)
+          {
+            continue;
+          }
 
-	BufferSize = nb_samples;
-      LastSync = 0;
-      StartCount = 0;
-      StartTimeSec = 0;
-      StartTimeNSec = 0;
-      TriggerNumber = 0;
-      TriggerCount = 0;
-      Rate = 0;
-      Trigger = entry;
-      SequenceID = entry;
+          // NCV PMTs
+          if (mc_pmt_id == 60) PMTID = NCV_PMT_1_ID;
+          else if (mc_pmt_id == 61) PMTID = NCV_PMT_2_ID;
+          // MC IDs are zero-based, data IDs are one-based
+          else PMTID = mc_pmt_id + 1;
+        }
+        else PMTID = iPMT + 1;
 
-      if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 61){
-// 	 		cout << " NCV" << endl;
-	PMTID = 6;
-	PMTx = pmt_x_array_run1[5];
-	PMTz = pmt_z_array_run1[5];
-	CardID = pmt_card_array_run1[5];
-	Channel = pmt_channel_array_run1[5];
-      } else if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 62){
-// 	 		cout << " NCV" << endl;
-	PMTID = 49;
-	PMTx = pmt_x_array_run1[48];
-	PMTz = pmt_z_array_run1[48];
-	CardID = pmt_card_array_run1[48];
-	Channel = pmt_channel_array_run1[48];
-      } else {
-	PMTID = ds->GetMC()->GetMCPMT(jPMT)->GetID()+1;
-	PMTx = pmt_x_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
-	PMTz = pmt_z_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
-	CardID = pmt_card_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
-	Channel = pmt_channel_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
+        // Get special channel PMT info
+        // TODO: clean this up (change map to accomodate these channels?)
+        if (iPMT >= 60) {
+          PMTID = 100;
+          PMTx = -10;
+          PMTy = -10;
+          PMTz = -10;
+          if (iPMT == 60) {
+            CardID = 21;
+            Channel = 0;
+          }
+          if (iPMT == 61) {
+            CardID = 21;
+            Channel = 1;
+          }
+          if (iPMT == 62) {
+            CardID = 21;
+            Channel = 2;
+          }
+          if (iPMT == 63) {
+            CardID = 21;
+            Channel = 3;
+          }
+        }
+        else {
+          const PMTInfo& info = pmt_id_to_info.at(PMTID);
+          PMTx = info.x();
+          PMTy = info.y();
+          PMTz = info.z();
+          CardID = info.card();
+          Channel = info.channel();
+        }
+
+        // Initialize waveform for this PMT using random noise
+        for (int i = 0; i < nb_samples; ++i) {
+          Data[i] = gRandom->Gaus(mean_noise, sigma_noise);
+        }
+
+        // If there were MC photon hits on this PMT, add those to the waveform
+        if (mc_pmt) {
+          int num_photons = mc_pmt->GetMCPhotonCount();
+          for ( int iPhot = 0; iPhot < num_photons; ++iPhot ) {
+            // loop on photons that generated a PE
+            const auto* mc_photon = mc_pmt->GetMCPhoton(iPhot);
+            double hit_time = mc_photon->GetHitTime(); // ns
+
+            // Factor of 1/2 converts from ns to samples (2 ns resolution)
+            int hit_sample = TMath::FloorNint(0.5*hit_time);
+            double hit_charge = mc_photon->GetCharge();
+
+            if (hit_sample < nb_samples - trigger_offset) {
+              for (int i = 0; i < 6; ++i) {
+                Data[trigger_offset + hit_sample] += pulse_shape[i] * hit_charge;
+              }
+            }
+          }
+        }
+
+        // Save the data for the current PMT to the tree
+        PMTData->Fill();
       }
-
-      hitPMT.push_back(PMTID-1);
-
-      for(Int_t i = 0; i < nb_samples; ++i) {
-	Data[i] = gRandom->Gaus(mean_noise,sigma_noise);
-      }
-
-
-      for( Int_t iPhot = 0; iPhot < ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount(); ++iPhot ){ // loop on photons that generated a PE
-
-	if (TMath::FloorNint(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount()-1)->GetHitTime()*0.5 - ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(0)->GetHitTime()*0.5) < 25000) {
-	  for(Int_t i = 0; i < 6; ++i) {
-	    Data[10000 + TMath::FloorNint(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount()-1)->GetHitTime()*0.5 - ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(0)->GetHitTime()*0.5)] += pulse_shape[i]*ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(iPhot)->GetCharge();
-	  }
-	}
-
-
-      }
-      PMTData->Fill();
     }
-
-    // PMT loop
-    for( Int_t iPMT = 0; iPMT < 64; ++iPMT ){
-      if(!ncv_hit) { break;}
-      if (find(hitPMT.begin(), hitPMT.end(), iPMT) == hitPMT.end()) {
-// 	 	cout << "No hit: " << iPMT << endl;
-	for(Int_t i = 0; i < nb_samples; ++i) {
-	  Data[i] = gRandom->Gaus(mean_noise,sigma_noise);
-	}
-	if (iPMT >= 60) {
-	  PMTID = 100;
-	  PMTx = -10;
-	  PMTz = -10;
-	  PMTy = -10;
-	  if (iPMT == 60) {
-	    CardID = 21;
-	    Channel = 0;
-	  }
-	  if (iPMT == 61) {
-	    CardID = 21;
-	    Channel = 1;
-	  }
-	  if (iPMT == 62) {
-	    CardID = 21;
-	    Channel = 2;
-	  }
-	  if (iPMT == 63) {
-	    CardID = 21;
-	    Channel = 3;
-	  }
-	} else {
-	  PMTID = iPMT+1;
-	  PMTx = pmt_x_array_run1[iPMT];
-	  PMTz = pmt_z_array_run1[iPMT];
-	  CardID = pmt_card_array_run1[iPMT];
-	  Channel = pmt_channel_array_run1[iPMT];
-	  PMTy = 0;
-	}
-	PMTf = 0;
-
-	PMTData->Fill();
-      }
-
-    }
-    }
-
   }
 
-  outputfile.Write();
-  outputfile.Close();
-  inputfile.Close();
+  output_file.Write();
+  output_file.Close();
+  input_file.Close();
 }
 
 int main(int argc, char* argv[]) {

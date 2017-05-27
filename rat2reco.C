@@ -59,36 +59,36 @@
 using namespace std;
 
 int rat2reco(char *filename) {
-  
+
   // Load RAT libraries (for dsReader)
   gSystem->Load("$(RATPAC_PATH)/lib/libRATEvent.so");
-  
+
   // create a random number generator
   gRandom = new TRandom3();
-  
+
   // Load the files
-  TFile inputfile(filename,"READ"); 
+  TFile inputfile(filename,"READ");
   RAT::DSReader *dsReader;
   RAT::DS::Root   *ds;
   dsReader = new RAT::DSReader(inputfile.GetName());
   ULong64_t NbEntries = dsReader->GetTotal();
-  
+
   // Initialize stuff
-  TGraph *gWave;    
+  TGraph *gWave;
   TCanvas *c1;
-  
+
   // some values about your waveform
   Float_t sigma_noise = 1.*0.001; // in V
   Float_t mean_noise = 0.0*0.001; // in V
   Float_t pulse_shape[6] = {5*0.001/35.,10*0.001/35.,8*0.001/35.,6*0.001/35.,4*0.001/35.,2*0.001/35.};
   Int_t pulse_location[3] = {10000,10010,10013}; // where you want your pulses to be located
   const Int_t nb_samples = 40000; // nb points in your waveform
-  
+
   Float_t waveform[nb_samples], waveform_samples[nb_samples];
-  
+
   // Create output file
   TFile outputfile(Form("rat2reco_%s", inputfile.GetName() ),"RECREATE");
-  
+
   // Tree and branhces
   TTree *PMTData = new TTree("PMTData","PMT Data tree");
   long LastSync ,StartCount, TriggerCount;
@@ -113,50 +113,50 @@ int rat2reco(char *filename) {
   PMTData->Branch("PMTx",&PMTx,"PMTx/I");
   PMTData->Branch("PMTy",&PMTy,"PMTy/I");
   PMTData->Branch("PMTz",&PMTz,"PMTz/I");
-  
-  
+
+
   // Variables
   Bool_t broken_tube = false;
   vector<Int_t> hitPMT;
   Bool_t ncv_hit;
-  
+
   for(Int_t i = 0; i < nb_samples; ++i) {
     waveform_samples[i] = i;
   }
-  
+
   // PMT grid coordinates (not in ratpac x,y,z)
   int pmt_x_array_run1[] = {0,0,0,1,2,3,4,5,6,7,7,7,1,2,2,1,3,4,4,3,5,6,6,5,1,2,2,1,3,4,4,3,5,6,6,5,1,2,2,1,3,4,4,3,5,6,6,5,0,0,0,1,2,3,4,5,6,7,7,7};
   int pmt_z_array_run1[] = {3,2,1,0,0,0,0,0,0,1,2,3,1,1,2,2,1,1,2,2,1,1,2,2,3,3,4,4,3,3,4,4,3,3,4,4,5,5,6,6,5,5,6,6,5,5,6,6,4,5,6,7,7,7,7,7,7,6,5,4};
   int pmt_card_array_run1[] = {3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,8,8,8,8,9,9,9,9,10,10,10,10,11,11,11,11,13,13,13,13,14,14,14,14,15,15,15,15,16,16,16,16,18,18,18,18,19,19,19,19,20,20,20,20};
   int pmt_channel_array_run1[] = {0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3};
-  
+
   for(ULong64_t entry=0; entry<10; ++entry){
     ds = dsReader->GetEvent(entry);
-    
+
     // Some initilizations
     broken_tube = false; hitPMT.clear(); ncv_hit = false;
-    
+
 //     cout << "New evt -- " << endl;
-    
+
     for( Int_t jPMT = 0; jPMT < ds->GetMC()->GetMCPMTCount(); ++jPMT ){
      	if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 61 || ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 62){
 	 ncv_hit = true;
 	 break;
-	} 
+	}
     }
-    
+
     if(ncv_hit) {
     for( Int_t jPMT = 0; jPMT < ds->GetMC()->GetMCPMTCount(); ++jPMT ){
-       
+
       if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 6 ||
 	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 49 ||
 	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 19 ||
-	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 37) { 
+	ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 37) {
 	continue;
 	}
-	
+
 // 	 	cout << "Hit: " << ds->GetMC()->GetMCPMT(jPMT)->GetID() << endl;
-	
+
 	BufferSize = nb_samples;
       LastSync = 0;
       StartCount = 0;
@@ -166,51 +166,51 @@ int rat2reco(char *filename) {
       TriggerCount = 0;
       Rate = 0;
       Trigger = entry;
-      SequenceID = entry; 
-      
+      SequenceID = entry;
+
       if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 61){
 // 	 		cout << " NCV" << endl;
 	PMTID = 6;
 	PMTx = pmt_x_array_run1[5];
 	PMTz = pmt_z_array_run1[5];
-	CardID = pmt_card_array_run1[5]; 
+	CardID = pmt_card_array_run1[5];
 	Channel = pmt_channel_array_run1[5];
       } else if (ds->GetMC()->GetMCPMT(jPMT)->GetID()+1 == 62){
 // 	 		cout << " NCV" << endl;
 	PMTID = 49;
 	PMTx = pmt_x_array_run1[48];
 	PMTz = pmt_z_array_run1[48];
-	CardID = pmt_card_array_run1[48]; 
+	CardID = pmt_card_array_run1[48];
 	Channel = pmt_channel_array_run1[48];
       } else {
 	PMTID = ds->GetMC()->GetMCPMT(jPMT)->GetID()+1;
 	PMTx = pmt_x_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
 	PMTz = pmt_z_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
-	CardID = pmt_card_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()]; 
+	CardID = pmt_card_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
 	Channel = pmt_channel_array_run1[ds->GetMC()->GetMCPMT(jPMT)->GetID()];
       }
-      
+
       hitPMT.push_back(PMTID-1);
-      
+
       for(Int_t i = 0; i < nb_samples; ++i) {
 	Data[i] = gRandom->Gaus(mean_noise,sigma_noise);
       }
-      
-      
-      for( Int_t iPhot = 0; iPhot < ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount(); ++iPhot ){ // loop on photons that generated a PE		
-	
+
+
+      for( Int_t iPhot = 0; iPhot < ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount(); ++iPhot ){ // loop on photons that generated a PE
+
 	if (TMath::FloorNint(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount()-1)->GetHitTime()*0.5 - ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(0)->GetHitTime()*0.5) < 25000) {
 	  for(Int_t i = 0; i < 6; ++i) {
 	    Data[10000 + TMath::FloorNint(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(ds->GetMC()->GetMCPMT(jPMT)->GetMCPhotonCount()-1)->GetHitTime()*0.5 - ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(0)->GetHitTime()*0.5)] += pulse_shape[i]*ds->GetMC()->GetMCPMT(jPMT)->GetMCPhoton(iPhot)->GetCharge();
 	  }
 	}
 	gWave = new TGraph(nb_samples,waveform_samples,Data);
-	
-	
+
+
       }
       PMTData->Fill();
     }
-    
+
     // PMT loop
     for( Int_t iPMT = 0; iPMT < 64; ++iPMT ){
       if(!ncv_hit) { break;}
@@ -222,8 +222,8 @@ int rat2reco(char *filename) {
 	if (iPMT >= 60) {
 	  PMTID = 100;
 	  PMTx = -10;
-	  PMTz = -10; 
-	  PMTy = -10; 
+	  PMTz = -10;
+	  PMTy = -10;
 	  if (iPMT == 60) {
 	    CardID = 21;
 	    Channel = 0;
@@ -243,27 +243,27 @@ int rat2reco(char *filename) {
 	} else {
 	  PMTID = iPMT+1;
 	  PMTx = pmt_x_array_run1[iPMT];
-	  PMTz = pmt_z_array_run1[iPMT]; 
-	  CardID = pmt_card_array_run1[iPMT]; 
-	  Channel = pmt_channel_array_run1[iPMT]; 
-	  PMTy = 0; 
-	} 
+	  PMTz = pmt_z_array_run1[iPMT];
+	  CardID = pmt_card_array_run1[iPMT];
+	  Channel = pmt_channel_array_run1[iPMT];
+	  PMTy = 0;
+	}
 	PMTf = 0;
-	
+
 	PMTData->Fill();
-      }  
-      
+      }
+
     }
     }
-    
+
   }
-  
+
   c1 = new TCanvas("c1","A Simple Graph Example",200,10,700,500);
   gWave->Draw("AL");
-  
+
   outputfile.Write();
   outputfile.Close();
   inputfile.Close();
-  
-  
+
+
 }
