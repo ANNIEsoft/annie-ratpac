@@ -74,6 +74,7 @@ ratapp_nomain = Builder(action=env['BUILDERS']['Program'].action,
 
 rootopts = SConscript('ROOT.scons')
 g4opts = SConscript('GEANT4.scons')
+llnlopts = SConscript('LLNL.scons')
 arch = SConscript('ARCH.'+ROOTARCH)
 
 for key in ['CXX', 'CC']:
@@ -100,6 +101,9 @@ for path in g4opts['CPPPATH']:
     env.Append(CXXFLAGS='-isystem ' + path)
 del g4opts['CPPPATH']
 env.Append(**g4opts)
+
+# Add LLNL fission library
+env.Append(**llnlopts)
 
 conf = Configure(env, custom_tests={'CheckCurlConfig' : CheckCurlConfig})
 # Add flags for curl if present

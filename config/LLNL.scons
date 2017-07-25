@@ -1,0 +1,19 @@
+#-*-python-*-
+# LLNL fission library configuration for SCons
+import os
+
+llnl_include_dir = os.environ['FISSION_INCLUDE']
+llnl_lib_dir = os.environ['FISSION_LIB']
+# os.environ['FREYADATAPATH']
+
+# Include some extra compile/link flags for the LLNL fission library
+llnlopts = { 'CPPPATH' : [ llnl_include_dir ],
+             'LIBPATH' : [ llnl_lib_dir ],
+             'LIBS' : '-lFission',
+           }
+# Returns a dictionary when you import this file using:
+# llnlopts = SConscript('config/LLNL.scons')
+#
+# Merge into your build environment with:
+# env.Append(llnlopts)
+Return("llnlopts")
