@@ -85,7 +85,7 @@ updateIlluminationMap(int imap, G4double srow, G4double scol, const G4Color *cp)
   mp[1] += cp->GetGreen();
   mp[2] += cp->GetBlue();
 }
-		      
+
 int
 GLG4SteppingAction_dump_IlluminationMap(void)
 {
@@ -198,7 +198,7 @@ GLG4SteppingAction::UserSteppingAction(const G4Step* aStep)
 	   << "\n position=" << track->GetPosition()
 	   << " momentum=" << track->GetMomentum()
 	   << G4endl;
-    track->SetTrackStatus( fStopAndKill );    
+    track->SetTrackStatus( fStopAndKill );
   }
 
   if(max_global_time>0.0){
@@ -209,7 +209,7 @@ GLG4SteppingAction::UserSteppingAction(const G4Step* aStep)
       const G4VPhysicalVolume* pv= track->GetVolume();
       const G4VProcess* lastproc= track->GetStep()->GetPostStepPoint()
 	->GetProcessDefinedStep();
-      
+
 
       G4cerr << "GLG4SteppingAction: Track time = " << gtime
 	     << " exceeds max_global_time = " << max_global_time
@@ -223,7 +223,7 @@ GLG4SteppingAction::UserSteppingAction(const G4Step* aStep)
 	     << G4endl;
       */
 
-      
+
       track->SetTrackStatus( fStopAndKill );
     }
   }
@@ -248,7 +248,7 @@ GLG4SteppingAction::UserSteppingAction(const G4Step* aStep)
 	   << "\n position=" << track->GetPosition()
 	   << " momentum=" << track->GetMomentum()
 	   << G4endl;
-    track->SetTrackStatus( fStopAndKill );    
+    track->SetTrackStatus( fStopAndKill );
   }
 
 
@@ -311,22 +311,22 @@ GLG4SteppingAction::UserSteppingAction(const G4Step* aStep)
   //   myGenerator->DeferTrackToLaterEvent(track);
   //   track->SetTrackStatus(status=fStopAndKill);
   // }
-  
+
 
     // Accumulate step statistics
-    
+
     RAT::TrackInfo *trackInfo = dynamic_cast<RAT::TrackInfo *>(
 						track->GetUserInformation());
-    G4ThreeVector postStepPoint = aStep->GetPostStepPoint()->GetPosition();
-    
+    G4ThreeVector preStepPoint = aStep->GetPreStepPoint()->GetPosition();
+
     if (track->GetDefinition()->GetParticleName() != "opticalphoton") {
-      trackInfo->energyCentroid.Fill(TVector3(postStepPoint.x(),
-					      postStepPoint.y(),
-					      postStepPoint.z()), 
+      trackInfo->energyCentroid.Fill(TVector3(preStepPoint.x(),
+					      preStepPoint.y(),
+					      preStepPoint.z()),
 				     aStep->GetTotalEnergyDeposit());
     }
 
-    G4VPhysicalVolume *volume = aStep->GetPostStepPoint()->GetPhysicalVolume();
+    G4VPhysicalVolume *volume = aStep->GetPreStepPoint()->GetPhysicalVolume();
     if (volume) {
       std::string volumeName = volume->GetName();
       trackInfo->energyLoss[volumeName] += aStep->GetTotalEnergyDeposit();

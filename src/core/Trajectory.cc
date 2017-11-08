@@ -21,12 +21,12 @@ Trajectory::Trajectory(const G4Track *aTrack) : G4Trajectory(aTrack),
 						      creatorProcessName("start")
 {
   ratTrack = new DS::MCTrack;
-  
+
   ratTrack->SetID(GetTrackID());
   ratTrack->SetParentID(GetParentID());
   ratTrack->SetPDGCode(GetPDGEncoding());
   ratTrack->SetParticleName(GetParticleName());
-  
+
   const G4VProcess *creatorProcess = aTrack->GetCreatorProcess();
   if (creatorProcess)
     creatorProcessName = creatorProcess->GetProcessName();
@@ -70,10 +70,10 @@ void Trajectory::AppendStep(const G4Step* aStep)
     }
     return;
   }
-  
+
   DS::MCTrackStep *ratStep = ratTrack->AddNewMCTrackStep();
   G4StepPoint *endPoint = aStep->GetPostStepPoint();
-  FillStep(endPoint, aStep, ratStep, aStep->GetStepLength());  
+  FillStep(endPoint, aStep, ratStep, aStep->GetStepLength());
   // Update total track length
   ratTrack->SetLength(ratTrack->GetLength() + ratStep->GetLength());
   if(Gsim::GetFillPointCont())
@@ -111,6 +111,8 @@ void Trajectory::FillStep(const G4StepPoint *point, const G4Step *step,
   else{
     ratStep->SetVolume(volume->GetName());
   }
+
+  ratStep->SetTotalEnergyDeposit(step->GetTotalEnergyDeposit());
 }
 
 

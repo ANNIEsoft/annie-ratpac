@@ -57,7 +57,7 @@ public:
   /** Momentum of particle (MeV/c) */
   virtual const TVector3& GetMomentum() const { return mom; }
   virtual void SetMomentum(const TVector3 &_mom) { mom = _mom; }
-  
+
   /** Kinetic energy of particle (MeV) */
   virtual Float_t GetKE() const { return ke; }
   virtual void SetKE(Float_t _ke) { ke = _ke; }
@@ -70,18 +70,25 @@ public:
   virtual std::string GetVolume() const { return volume; }
   virtual void SetVolume(const std::string& _volume) { volume = _volume; }
 
-  ClassDef(MCTrackStep, 1)
-  
+  /** Total energy deposited (MeV) during this step **/
+  virtual Double_t GetTotalEnergyDeposit() const { return total_energy_deposit; }
+  virtual Double_t SetTotalEnergyDeposit(Double_t tot_Edep) {
+    total_energy_deposit = tot_Edep;
+  }
+
+  ClassDef(MCTrackStep, 2)
+
 protected:
   Float_t length;
   Float_t globalTime;
   Float_t localTime;
   Float_t properTime;
-  Float_t ke;  
+  Float_t ke;
   TVector3 endpoint;
   TVector3 mom;
   std::string process;
   std::string volume;
+  Double_t total_energy_deposit;
 };
 
   } // namespace DS
