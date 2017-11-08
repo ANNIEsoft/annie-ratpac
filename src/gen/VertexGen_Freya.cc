@@ -5,7 +5,7 @@
 #include "RAT/VertexGen_Freya.hh"
 #include "RAT/Log.hh"
 #include "RAT/DB.hh"
-#include "Randomize.hh" // G4UniformRand()
+#include "CLHEP/Random/RandFlat.h"
 
 #include "G4Event.hh"
 #include "G4PrimaryVertex.hh"
@@ -40,7 +40,7 @@ RAT::VertexGen_Freya::VertexGen_Freya(const char* arg_dbname)
 
   // Use the same random number generator as Geant4 in FREYA to create
   // fission events
-  fissionEvent::setRNGd( []() -> double { return G4UniformRand(); } );
+  fissionEvent::setRNGd( []() -> double { return CLHEP::RandFlat::shoot(); } );
 
   // Instruct the LLNL library to use FREYA to generate fission events
   fissionEvent::setCorrelationOption(LLNL_USE_FREYA);
